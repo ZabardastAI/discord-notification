@@ -1,0 +1,54 @@
+{
+  "embeds": [
+    {
+      "title": "📥 Pull Request: {{ pull_request.title }}",
+      "url": "{{ pull_request.html_url }}",
+      "color": {{ color }},
+      "author": {
+        "name": "{{ pull_request.user.login }}",
+        "icon_url": "{{ pull_request.user.avatar_url }}"
+      },
+      "fields": [
+        {
+          "name": "📂 Ветки",
+          "value": "`{{ pull_request.head.ref }}` → `{{ pull_request.base.ref }}`",
+          "inline": true
+        },
+        {
+          "name": "📌 Статус",
+          "value": "`{{ action | uppercase }}`",
+          "inline": true
+        },
+        {
+          "name": "🏷️ Labels",
+          "value": "{{#if pull_request.labels.length }}{{#each pull_request.labels}}`{{ this.name }}` {{/each}}{{else}}`—`{{/if}}",
+          "inline": true
+        },
+        {
+          "name": "🧑‍💼 Автор",
+          "value": "`{{ pull_request.user.login }}`",
+          "inline": true
+        },
+        {
+          "name": "👀 Reviewer",
+          "value": "{{#if pull_request.requested_reviewers.length }}{{#each pull_request.requested_reviewers}}`{{ this.login }}` {{/each}}{{else}}`—`{{/if}}",
+          "inline": true
+        },
+        {
+          "name": "📝 Описание",
+          "value": "{{#if pull_request.body }}{{ pull_request.body }}{{else}}`(нет описания)`{{/if}}",
+          "inline": false
+        },
+        {
+          "name": "📊 Изменения",
+          "value": "`{{ pull_request.changed_files }} файлов • +{{ pull_request.additions }} / -{{ pull_request.deletions }}`",
+          "inline": false
+        }
+      ],
+      "footer": {
+        "text": "🔃 Pull Request #{{ pull_request.number }} • {{ now }}"
+      },
+      "timestamp": "{{ now }}"
+    }
+  ]
+}
