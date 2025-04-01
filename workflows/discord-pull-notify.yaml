@@ -1,54 +1,76 @@
-{
-  "embeds": [
-    {
-      "title": "📥 Pull Request: {{ pull_request.title }}",
-      "url": "{{ pull_request.html_url }}",
-      "color": {{ color }},
-      "author": {
-        "name": "{{ pull_request.user.login }}",
-        "icon_url": "{{ pull_request.user.avatar_url }}"
-      },
-      "fields": [
-        {
-          "name": "📂 Ветки",
-          "value": "`{{ pull_request.head.ref }}` → `{{ pull_request.base.ref }}`",
-          "inline": true
-        },
-        {
-          "name": "📌 Статус",
-          "value": "`{{ action | uppercase }}`",
-          "inline": true
-        },
-        {
-          "name": "🏷️ Labels",
-          "value": "{{#if pull_request.labels.length }}{{#each pull_request.labels}}`{{ this.name }}` {{/each}}{{else}}`—`{{/if}}",
-          "inline": true
-        },
-        {
-          "name": "🧑‍💼 Автор",
-          "value": "`{{ pull_request.user.login }}`",
-          "inline": true
-        },
-        {
-          "name": "👀 Reviewer",
-          "value": "{{#if pull_request.requested_reviewers.length }}{{#each pull_request.requested_reviewers}}`{{ this.login }}` {{/each}}{{else}}`—`{{/if}}",
-          "inline": true
-        },
-        {
-          "name": "📝 Описание",
-          "value": "{{#if pull_request.body }}{{ pull_request.body }}{{else}}`(нет описания)`{{/if}}",
-          "inline": false
-        },
-        {
-          "name": "📊 Изменения",
-          "value": "`{{ pull_request.changed_files }} файлов • +{{ pull_request.additions }} / -{{ pull_request.deletions }}`",
-          "inline": false
-        }
-      ],
-      "footer": {
-        "text": "🔃 Pull Request #{{ pull_request.number }} • {{ now }}"
-      },
-      "timestamp": "{{ now }}"
-    }
-  ]
-}
+name: Notify Discord on PR
+
+on:
+  pull_request:
+    types: [opened, reopened, closed]
+
+jobs:
+  notify-discord:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Определить цвет embed
+        id: set_color
+        run: |
+          COLOR=""
+          if [[ "${{ github.event.action }}" == "closed" && "${{ github.event.pull_request.merged }}" == "true" ]]; then
+            COLOR=3066993  # зелёный
+          elif [[ "${{ github.event.action }}" == "closed" ]]; then
+            COLOR=9807270  # серый
+          elif [[ "${{ github.event.action }}" == "reopened" ]]; then
+            COLOR=16776960 # жёлтый
+          else
+            COLOR=7506394  # синий
+          fi
+          echo "color=$COLOR" >> $GITHUB_OUTPUT
+
+      - name: Отправить уведомление в Discord
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          curl -X POST -H "Content-Type: application/json" \
+          -d '{
+            "embeds": [
+              {
+                "title": "📥 Pull Request: ${{ github.event.pull_request.title }}",
+                "url": "${{ github.event.pull_request.html_url }}",
+                "color": ${{ steps.set_color.outputs.color }},
+                "author": {
+                  "name": "${{ github.event.pull_request.user.login }}",
+                  "icon_url": "${{ github.event.pull_request.user.avatar_url }}"
+                },
+                "fields": [
+                  {
+                    "name": "📂 Ветки",
+                    "value": "`${{ github.event.pull_request.head.ref }}` → `${{ github.event.pull_request.base.ref }}`",
+                    "inline": true
+                  },
+                  {
+                    "name": "📌 Статус",
+                    "value": "`${{ github.event.action }}`",
+                    "inline": true
+                  },
+                  {
+                    "name": "🧑‍💼 Автор",
+                    "value": "`${{ github.event.pull_request.user.login }}`",
+                    "inline": true
+                  },
+                  {
+                    "name": "📝 Описание",
+                    "value": "${{ github.event.pull_request.body || 'Нет описания.' }}",
+                    "inline": false
+                  },
+                  {
+                    "name": "📊 Изменения",
+                    "value": "`+${{ github.event.pull_request.additions }} / -${{ github.event.pull_request.deletions }}` в ${{ github.event.pull_request.changed_files }} файлах",
+                    "inline": false
+                  }
+                ],
+                "footer": {
+                  "text": "🔃 Pull Request #${{ github.event.pull_request.number }}"
+                },
+                "timestamp": "${{ github.event.pull_request.updated_at }}"
+              }
+            ]
+          }' \
+          $DISCORD_WEBHOOK
